@@ -6,6 +6,16 @@
   "repository": "https://github.com/Table-Side/Order",
   "license": "MIT",
   "private": true,
+  "scripts": {
+    "build": "yarn prisma:gen && yarn tsc --project ./",
+    "prisma:gen": "prisma generate",
+    "prisma:migrate:create": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "start": "node dist/server.js",
+    "start:migrate": "yarn prisma:migrate:deploy && yarn start",
+    "start:dev": "nodemon src/server.ts",
+    "start:migrate:dev": "yarn prisma:migrate:create && yarn start:dev"
+  },
   "dependencies": {
     "@prisma/client": "^5.10.2",
     "cors": "^2.8.5",
