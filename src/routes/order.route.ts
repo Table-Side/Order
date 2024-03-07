@@ -1,10 +1,9 @@
 import { Router } from "express";
 import prisma from "../config/prisma";
-import authenticateJWT from "../middleware/jwt_validate";
 
 const router = Router();
 
-router.post("/new", authenticateJWT, async (req, res) => {
+router.post("/new", async (req, res) => {
     // Create new order for current user
     try {
         const { userId } = req.user as { userId: string };
@@ -21,7 +20,7 @@ router.post("/new", authenticateJWT, async (req, res) => {
     }
 });
 
-router.put("/:orderId/add", authenticateJWT, async (req, res) => {
+router.put("/:orderId/add", async (req, res) => {
     // Ensure order for order ID is for current user
     try {
         const { orderId } = req.params;
@@ -52,6 +51,7 @@ router.put("/:orderId/add", authenticateJWT, async (req, res) => {
             data: {
                 itemId: itemId,
                 quantity: quantity,
+                orderId: orderId,
             },
         });
 
@@ -74,7 +74,7 @@ router.put("/:orderId/add", authenticateJWT, async (req, res) => {
     }
 });
 
-router.patch("/:orderId/updateQuantity", authenticateJWT, async (req, res) => {
+router.patch("/:orderId/updateQuantity", async (req, res) => {
     // Ensure order for order ID is for current user
     try {
         const { orderId } = req.params;
@@ -116,7 +116,7 @@ router.patch("/:orderId/updateQuantity", authenticateJWT, async (req, res) => {
     }
 });
 
-router.delete("/:orderId/remove", authenticateJWT, async (req, res) => {
+router.delete("/:orderId/remove", async (req, res) => {
     try {
         const { orderId } = req.params;
         const { orderItemId } = req.body;
@@ -160,7 +160,7 @@ router.delete("/:orderId/remove", authenticateJWT, async (req, res) => {
     }
 });
 
-router.delete("/:orderId/abandon", authenticateJWT, async (req, res) => {
+router.delete("/:orderId/abandon", async (req, res) => {
     try {
         const { orderId } = req.params;
         const { userId } = req.user as { userId: string };
@@ -191,7 +191,7 @@ router.delete("/:orderId/abandon", authenticateJWT, async (req, res) => {
     }
 });
 
-router.get("/:orderId", authenticateJWT, async (req, res) => {
+router.get("/:orderId", async (req, res) => {
     try {
         const { orderId } = req.params;
 
@@ -211,14 +211,14 @@ router.get("/:orderId", authenticateJWT, async (req, res) => {
     }
 });
 
-router.get("/active", authenticateJWT, async (req, res) => {
+router.get("/active", async (req, res) => {
     try {
         const { userId } = req.user as { userId: string };
 
         const order = await prisma.order.findMany({
             where: {
                 forUser: userId,
-                Transaction: {
+                transaction: {
                     is: null
                 },
             },
@@ -234,14 +234,14 @@ router.get("/active", authenticateJWT, async (req, res) => {
     }
 });
 
-router.get("/history", authenticateJWT, async (req, res) => {
+router.get("/history", async (req, res) => {
     try {
         const { userId } = req.user as { userId: string };
 
         const order = await prisma.order.findMany({
             where: {
                 forUser: userId,
-                Transaction: {
+                transaction: {
                     isNot: null,
                 },
             },
