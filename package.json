@@ -1,5 +1,5 @@
 {
-  "name": "tableside-order",
+  "name": "@tableside/order",
   "version": "0.1.0",
   "description": "A microservice component for ordering from the restaurant",
   "main": "dist/server.js",
