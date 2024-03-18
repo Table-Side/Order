@@ -4,7 +4,7 @@ name: Create and publish Docker image
 on:
   workflow_run:
     workflows: ["Test"]
-    branches: [release]
+    branches: [main]
     types: 
       - completed
 
