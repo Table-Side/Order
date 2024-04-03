@@ -26,7 +26,7 @@ class App {
         });
 
         // Request Logging (console)
-        this.server.use((req: Request, res: Response, next) => {
+        this.server.use((req: Request, res: Response, next: NextFunction) => {
             console.log(`Request received: ${req.method} ${req.url}`);
             next();
         });
@@ -40,7 +40,7 @@ class App {
         this.server.use("/orders", routers.order);
 
         // 404
-        this.server.use((req: Request, res: Response, next) => {
+        this.server.use((req: Request, res: Response, next: NextFunction) => {
             return res.status(404).send({
                 error: {
                     code: 404,
