@@ -49,3 +49,18 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+  deploy-to-api:
+    runs-on: ubuntu-latest
+    needs: release-image
+    steps:
+      - name: Trigger API deployment workflow
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.API_DEPLOY_PAT }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'Table-Side',
+              repo: 'API',
+              workflow_id: 'deploy.yml',
+              ref: 'main'
+            });
