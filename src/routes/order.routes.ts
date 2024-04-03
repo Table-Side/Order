@@ -1,13 +1,13 @@
-import { Router } from "express";
+import { Router, Response, NextFunction } from "express";
 import prisma from "../config/prisma";
-import { OrderItem } from "@prisma/client";
+import { AuthenticatedRequest } from "../interfaces";
 
 const router = Router();
 
-router.post("/new", async (req, res) => {
+router.post("/new", async (req: AuthenticatedRequest, res: Response) => {
     // Create new order for current user
     try {
-        const { userId } = req.user as { userId: string };
+        const userId = req.user!.sub;
 
         const newOrder = await prisma.order.create({
             data: {
@@ -16,17 +16,24 @@ router.post("/new", async (req, res) => {
             },
         })
 
-        res.status(200).json(newOrder);
+        res.status(200).json({
+            data: newOrder
+        });
     } catch (error) {
-        res.status(500).json({ error: "Failed to create new order" });
+        res.status(500).json({
+            error: {
+                message: "Failed to create new order",
+                details: error
+            }
+        });
     }
 });
 
-router.put("/:orderId/add", async (req, res) => {
+router.put("/:orderId/add", async (req: AuthenticatedRequest, res: Response) => {
     try {
         const { orderId } = req.params;
         const { itemId, quantity } = req.body;
-        const { userId } = req.user as { userId: string };
+        const userId = (req.user as { sub: string }).sub;
 
         // Ensure order exists and is for current user
         const order = await prisma.order.findUnique({
@@ -92,12 +99,12 @@ router.put("/:orderId/add", async (req, res) => {
     }
 });
 
-router.patch("/:orderId/updateQuantity", async (req, res) => {
+router.patch("/:orderId/updateQuantity", async (req: AuthenticatedRequest, res: Response) => {
     // Ensure order for order ID is for current user
     try {
         const { orderId } = req.params;
         const { orderItemId, quantity } = req.body;
-        const { userId } = req.user as { userId: string };
+        const userId = req.user!.sub;
 
         const order = await prisma.order.findUnique({
             where: {
@@ -134,11 +141,11 @@ router.patch("/:orderId/updateQuantity", async (req, res) => {
     }
 });
 
-router.delete("/:orderId/remove", async (req, res) => {
+router.delete("/:orderId/remove", async (req: AuthenticatedRequest, res: Response) => {
     try {
         const { orderId } = req.params;
         const { orderItemId } = req.body;
-        const { userId } = req.user as { userId: string };
+        const userId = req.user!.sub;
 
         const order = await prisma.order.findUnique({
             where: {
@@ -178,10 +185,10 @@ router.delete("/:orderId/remove", async (req, res) => {
     }
 });
 
-router.delete("/:orderId/abandon", async (req, res) => {
+router.delete("/:orderId/abandon", async (req: AuthenticatedRequest, res: Response) => {
     try {
         const { orderId } = req.params;
-        const { userId } = req.user as { userId: string };
+        const userId = req.user!.sub;
 
         const order = await prisma.order.findUnique({
             where: {
@@ -209,10 +216,10 @@ router.delete("/:orderId/abandon", async (req, res) => {
     }
 });
 
-// router.post("/:orderId/checkout", async (req, res) => {
+// router.post("/:orderId/checkout", async (req: AuthenticatedRequest, res: Response) => {
 //     try {
 //         const { orderId } = req.params;
-//         const { userId } = req.user as { userId: string };
+//         const userId = req.user!.sub;
 
 //         const order = await prisma.order.findUnique({
 //             where: {
@@ -261,7 +268,7 @@ router.delete("/:orderId/abandon", async (req, res) => {
 //     }
 // });
 
-router.get("/:orderId", async (req, res) => {
+router.get("/:orderId", async (req: AuthenticatedRequest, res: Response) => {
     try {
         const { orderId } = req.params;
 
@@ -281,9 +288,9 @@ router.get("/:orderId", async (req, res) => {
     }
 });
 
-router.get("/active", async (req, res) => {
+router.get("/active", async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const { userId } = req.user as { userId: string };
+        const userId = req.user!.sub;
 
         const order = await prisma.order.findMany({
             where: {
@@ -304,9 +311,9 @@ router.get("/active", async (req, res) => {
     }
 });
 
-router.get("/history", async (req, res) => {
+router.get("/history", async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const { userId } = req.user as { userId: string };
+        const userId = req.user!.sub;
 
         const order = await prisma.order.findMany({
             where: {

@@ -1,6 +1,6 @@
 import express, { NextFunction, Request, Response } from 'express';
 
-import cors from 'cors';
+import * as middleware from "./middleware";
 
 import * as routers from "./routes";
 
@@ -26,13 +26,13 @@ class App {
         });
 
         // Request Logging (console)
-        this.server.use((req, res, next) => {
+        this.server.use((req: Request, res: Response, next) => {
             console.log(`Request received: ${req.method} ${req.url}`);
             next();
         });
-
-        // CORS
-        this.server.use(cors());
+        
+        // JWT Decode
+        this.server.use(middleware.decodeJWT);
     }
 
     routes() {
@@ -40,7 +40,7 @@ class App {
         this.server.use("/orders", routers.order);
 
         // 404
-        this.server.use((req, res, next) => {
+        this.server.use((req: Request, res: Response, next) => {
             return res.status(404).send({
                 error: {
                     code: 404,
