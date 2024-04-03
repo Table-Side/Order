@@ -10,7 +10,8 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "build": "yarn prisma:gen && yarn tsc --project ./",
+    "build": "yarn prisma:gen && yarn build:tsc",
+    "build:tsc": "yarn tsc --project ./",
     "prisma:gen": "prisma generate",
     "prisma:migrate:initial": "mkdir -p prisma/migrations/0_init && prisma migrate diff --from-empty --to-schema-datamodel ./prisma/schema.prisma --script > ./prisma/migrations/0_init/migration.sql",
     "prisma:migrate:create": "prisma migrate dev",
