@@ -284,6 +284,7 @@ router.post("/:orderId/checkout", isAuthenticated, hasRole("customer"), isOrderF
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
+                "X-Request-From": "tableside-order"
             },
             body: JSON.stringify({ itemIds }),
         });
@@ -354,6 +355,7 @@ router.post("/:orderId/checkout", isAuthenticated, hasRole("customer"), isOrderF
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
+                "X-Request-From": "tableside-order"
             },
             body: JSON.stringify({
                 orderId: orderId,
@@ -363,6 +365,19 @@ router.post("/:orderId/checkout", isAuthenticated, hasRole("customer"), isOrderF
                 })),
             }),
         });
+
+        // Circuit break: order could not be sent to kitchen
+        const sendOrderToKitchenResBody = await sendOrderToKitchenReq.json();
+        if (!sendOrderToKitchenReq.ok) {
+            // todo: remove order transaction from database
+
+            return res.status(500).json({
+                error: {
+                    message: "Failed to send order to kitchen.",
+                    details: await sendOrderToKitchenResBody
+                }
+            });
+        }
 
         res.status(201).json({
             data: completedOrder
