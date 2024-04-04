@@ -260,6 +260,7 @@ router.delete("/:orderId/abandon", isAuthenticated, hasRole("customer"), isOrder
 router.post("/:orderId/checkout", isAuthenticated, hasRole("customer"), isOrderForUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
         const { orderId } = req.params;
+        const userId = req.user.sub;
 
         // Ensure order is not checked out already
         const existingTransaction = await prisma.transaction.findFirst({
@@ -368,6 +369,7 @@ router.post("/:orderId/checkout", isAuthenticated, hasRole("customer"), isOrderF
             body: JSON.stringify({
                 restaurantId: completedOrder.forRestaurant,
                 orderId: orderId,
+                userId: userId,
                 items: order.items.map((item: OrderItem) => ({
                     itemId: item.itemId,
                     quantity: item.quantity,
@@ -378,17 +380,22 @@ router.post("/:orderId/checkout", isAuthenticated, hasRole("customer"), isOrderF
         // Circuit break: order could not be sent to kitchen
         const sendOrderToKitchenResBody = await sendOrderToKitchenReq.json();
         if (!sendOrderToKitchenReq.ok) {
-            // todo: remove order transaction from database
+            // Remove order transaction from database
+            await prisma.transaction.delete({
+                where: {
+                    id: transaction.id,
+                },
+            });
 
             return res.status(500).json({
                 error: {
                     message: "Failed to send order to kitchen.",
-                    details: await sendOrderToKitchenResBody
+                    details: await sendOrderToKitchenResBody.json()
                 }
             });
         }
 
-        res.status(201).json({
+        res.status(200).json({
             data: completedOrder
         });
     } catch (error) {
