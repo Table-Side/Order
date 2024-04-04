@@ -19,6 +19,14 @@ router.post("/new", isAuthenticated, hasRole("customer"), restaurantExists, asyn
             },
         })
 
+        if (!newOrder) {
+            return res.status(500).json({
+                error: {
+                    message: "Order cannot be created"
+                }
+            });
+        }
+
         res.status(200).json({
             data: newOrder
         });
@@ -383,7 +391,12 @@ router.post("/:orderId/checkout", isAuthenticated, hasRole("customer"), isOrderF
             data: completedOrder
         });
     } catch (error) {
-        res.status(500).json({ error: "Failed to checkout order" });
+        res.status(500).json({
+            error: {
+                message: "Failed to checkout order",
+                details: error
+            }
+        });
     }
 });
 
