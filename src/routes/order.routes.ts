@@ -366,6 +366,7 @@ router.post("/:orderId/checkout", isAuthenticated, hasRole("customer"), isOrderF
                 "X-Request-From": "tableside-order"
             },
             body: JSON.stringify({
+                restaurantId: completedOrder.forRestaurant,
                 orderId: orderId,
                 items: order.items.map((item: OrderItem) => ({
                     itemId: item.itemId,
