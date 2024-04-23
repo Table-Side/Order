@@ -87,7 +87,7 @@ router.post("/:orderId/checkout", isAuthenticated, hasRole("customer"), isOrderF
 
         // Fetch latest order item details
         const itemIds = order.items.map((item: OrderItem) => item.itemId);
-        const itemDetailsReq = await fetch(`http://${process.env.RESTAURANT_SERVICE_URL ?? 'restaurant'}/internal/items`, {
+        const itemDetailsReq = await fetch(`http://${process.env.RESTAURANT_SERVICE_URL ?? 'restaurant:3000'}/internal/items`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
