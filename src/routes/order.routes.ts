@@ -11,19 +11,7 @@ router.post("/new", isAuthenticated, hasRole("customer"), restaurantExists, asyn
         const userId = req.user.sub;
         const { restaurantId } = req.body;
 
-        console.timeLog(`RestaurantID: ${restaurantId}`)
-
-        // Ensure the restaurant exists
-        const restaurant = await fetch(`http://${process.env.RESTAURANT_SERVICE_URL ?? 'restaurant:3000'}/internal/restaurants/${restaurantId}`);
-        if (!restaurant.ok) {
-            return res.status(404).json({
-                error: {
-                    message: "Restaurant not found"
-                }
-            });
-        }
-
-        console.log(`Restaurant found: ${restaurantId}`)
+        console.log(`RestaurantID: ${restaurantId}`)
 
         // Create new order
         const newOrder = await prisma.order.create({
