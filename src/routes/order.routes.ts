@@ -14,7 +14,7 @@ router.post("/new", isAuthenticated, hasRole("customer"), restaurantExists, asyn
         console.timeLog(`RestaurantID: ${restaurantId}`)
 
         // Ensure the restaurant exists
-        const restaurant = await fetch(`${process.env.RESTAURANT_SERVICE_URL ?? 'restaurant'}/internal/restaurants/${restaurantId}`);
+        const restaurant = await fetch(`http://${process.env.RESTAURANT_SERVICE_URL ?? 'restaurant'}/internal/restaurants/${restaurantId}`);
         if (!restaurant.ok) {
             return res.status(404).json({
                 error: {
@@ -107,7 +107,7 @@ router.put("/:orderId/add", isAuthenticated, hasRole("customer"), isOrderForUser
 
         // Get item details from restaurant service
         const itemDetailsReq = await fetch(
-            `${process.env.RESTAURANT_SERVICE_URL ?? 'restaurant'}/internal/items`,
+            `http://${process.env.RESTAURANT_SERVICE_URL ?? 'restaurant'}/internal/items`,
             {
                 method: "POST",
                 headers: {
