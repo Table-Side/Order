@@ -100,7 +100,24 @@ Manage an order.
 
 - **PATCH** `/:orderId/updateQuantity`: Update an item's quantity
 
+    - **Sample Request**
+
+    ```json
+    {
+        "orderItemId": "",
+        "quantity": 5
+    }
+    ```
+
 - **DELETE** `/:orderId/remove`: Remove an item from an order
+
+    - **Sample Request**
+    
+    ```json
+    {
+        "orderItemId": ""
+    }
+    ```
 
 - **GET** `/active`: Get a user's current/active order
 
