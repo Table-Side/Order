@@ -11,6 +11,8 @@ router.post("/new", isAuthenticated, hasRole("customer"), restaurantExists, asyn
         const userId = req.user.sub;
         const { restaurantId } = req.body;
 
+        console.timeLog(`RestaurantID: ${restaurantId}`)
+
         // Ensure the restaurant exists
         const restaurant = await fetch(`${process.env.RESTAURANT_SERVICE_URL}/internal/restaurants/${restaurantId}`);
         if (!restaurant.ok) {
