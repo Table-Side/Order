@@ -2,7 +2,6 @@ import { Router, Response } from "express";
 import prisma from "../config/prisma";
 import { AuthenticatedRequest } from "../interfaces";
 import { hasRole, isAuthenticated, restaurantExists, isOrderForUser } from "../middleware";
-import { OrderItem } from "@prisma/client";
 
 const router = Router();
 
@@ -12,10 +11,23 @@ router.post("/new", isAuthenticated, hasRole("customer"), restaurantExists, asyn
         const userId = req.user.sub;
         const { restaurantId } = req.body;
 
+        // Ensure the restaurant exists
+        const restaurant = await fetch(`${process.env.RESTAURANT_SERVICE_URL}/internal/restaurants/${restaurantId}`);
+        if (!restaurant.ok) {
+            return res.status(404).json({
+                error: {
+                    message: "Restaurant not found"
+                }
+            });
+        }
+
+        console.log(`Restaurant found: ${restaurantId}`)
+
+        // Create new order
         const newOrder = await prisma.order.create({
             data: {
                 forUser: userId,
-                forRestaurant: restaurantId,
+                forRestaurant: restaurantId.toString(),
             },
         })
 
@@ -40,11 +52,56 @@ router.post("/new", isAuthenticated, hasRole("customer"), restaurantExists, asyn
     }
 });
 
+router.get("/:orderId", isAuthenticated, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const { orderId } = req.params;
+
+        const order = await prisma.order.findUnique({
+            where: {
+                id: orderId,
+            },
+        });
+
+        if (!order) {
+            return res.status(404).json({
+                error: {
+                    message: "Order not found"
+                }
+            });
+        }
+
+        res.status(200).json({
+            data: order
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: {
+                message: "Failed to remove item from order",
+                details: error
+            }
+        });
+    }
+});
+
 router.put("/:orderId/add", isAuthenticated, hasRole("customer"), isOrderForUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
         const userId = req.user.sub;
         const { orderId } = req.params;
         const { itemId, quantity } = req.body;
+
+        // Get the order
+        const order = await prisma.order.findFirst({
+            where: {
+                id: orderId,
+            },
+        });
+        if (!order) {
+            return res.status(404).json({
+                error: {
+                    message: "Order not found"
+                }
+            });
+        }
 
         // Get item details from restaurant service
         const itemDetailsReq = await fetch(
@@ -54,7 +111,7 @@ router.put("/:orderId/add", isAuthenticated, hasRole("customer"), isOrderForUser
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ itemIds: [itemId] }),
+                body: JSON.stringify({ restaurantId: order.forRestaurant, itemIds: [itemId] }),
             }    
         );
 
@@ -208,237 +265,6 @@ router.delete("/:orderId/remove", isAuthenticated, hasRole("customer"), isOrderF
     }
 });
 
-router.delete("/:orderId/abandon", isAuthenticated, hasRole("customer"), isOrderForUser, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-        const { orderId } = req.params;
-
-        // Ensure order is not checked out
-        const existingTransaction = await prisma.transaction.findFirst({
-            where: {
-                orderId: orderId,
-            },
-        });
-
-        if (existingTransaction) {
-            return res.status(403).json({
-                error: {
-                    message: "Order cannot be abandoned",
-                    details: "Order has already been checked out."
-                }
-            });
-        }
-
-        // Delete order
-        const deletedOrder = await prisma.order.delete({
-            where: {
-                id: orderId,
-            },
-        });
-
-        if (!deletedOrder) {
-            return res.status(404).json({
-                error: {
-                    message: "Order not deleted",
-                    details: "Order could not be found. Ensure ID is correct and that order has not been deleted already."
-                }
-            });
-        }
-
-        res.status(200).json({
-            data: deletedOrder
-        });
-    } catch (error) {
-        res.status(500).json({
-            error: {
-                message: "Failed to abandon order",
-                details: error
-            }
-        });
-    }
-});
-
-router.post("/:orderId/checkout", isAuthenticated, hasRole("customer"), isOrderForUser, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-        const { orderId } = req.params;
-        const userId = req.user.sub;
-
-        // Ensure order is not checked out already
-        const existingTransaction = await prisma.transaction.findFirst({
-            where: {
-                orderId: orderId,
-            },
-        });
-
-        if (existingTransaction) {
-            return res.status(403).json({
-                error: {
-                    message: "Order cannot be abandoned",
-                    details: "Order has already been checked out."
-                }
-            });
-        }
-        // Get order details
-        let order = await prisma.order.findUnique({
-            where: {
-                id: orderId,
-            },
-            include: {
-                items: true,
-            },
-        });
-
-        // Fetch latest order item details
-        const itemIds = order.items.map((item: OrderItem) => item.itemId);
-        const itemDetailsReq = await fetch(`${process.env.RESTAURANT_SERVICE_URL}/internal/items`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-Request-From": "tableside-order"
-            },
-            body: JSON.stringify({ itemIds }),
-        });
-        const itemDetails = await itemDetailsReq.json();
-        
-        // Update order item prices
-        const orderItemUpdates = itemDetails.map((item: { id: string, isAvailable: boolean, price: number }) => {
-            // Find corresponding item in order
-            const orderItem = order.items.find((orderItem: OrderItem) => orderItem.itemId === item.id);
-
-            if (item.isAvailable === false) {
-                return prisma.orderItem.delete({
-                    where: {
-                        id: orderItem.id,
-                    },
-                });
-            }
-
-            return prisma.orderItem.update({
-                where: {
-                    id: item.id,
-                },
-                data: {
-                    price: item.price,
-                },
-            });
-        });
-        await prisma.$transaction(orderItemUpdates); // Do as transaction in order to ensure order is updated atomically
-
-        // Get latest order
-        order = await prisma.order.findUnique({
-            where: {
-                id: orderId,
-            },
-            include: {
-                items: true,
-            },
-        });
-
-        // Create transaction
-        const transaction = await prisma.transaction.create({
-            data: {
-                amount: order.items.reduce((acc, item: OrderItem) => acc + (item.price.toNumber() * item.quantity), 0),
-                order: {
-                    connect: {
-                        id: orderId,
-                    },
-                },
-                currency: "GBP" // todo: obtain currency from restaurant service
-            },
-        });
-
-        const completedOrder = await prisma.order.update({
-            where: {
-                id: orderId,
-            },
-            data: {
-                transaction: {
-                    connect: {
-                        id: transaction.id,
-                    },
-                },
-            },
-        });
-
-        // Send order to kitchen service
-        const sendOrderToKitchenReq = await fetch(`${process.env.KITCHEN_SERVICE_URL}/internal/orders/receive`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-Request-From": "tableside-order"
-            },
-            body: JSON.stringify({
-                restaurantId: completedOrder.forRestaurant,
-                orderId: orderId,
-                userId: userId,
-                items: order.items.map((item: OrderItem) => ({
-                    itemId: item.itemId,
-                    quantity: item.quantity,
-                })),
-            }),
-        });
-
-        // Circuit break: order could not be sent to kitchen
-        const sendOrderToKitchenResBody = await sendOrderToKitchenReq.json();
-        if (!sendOrderToKitchenReq.ok) {
-            // Remove order transaction from database
-            await prisma.transaction.delete({
-                where: {
-                    id: transaction.id,
-                },
-            });
-
-            return res.status(500).json({
-                error: {
-                    message: "Failed to send order to kitchen.",
-                    details: await sendOrderToKitchenResBody.json()
-                }
-            });
-        }
-
-        res.status(200).json({
-            data: completedOrder
-        });
-    } catch (error) {
-        res.status(500).json({
-            error: {
-                message: "Failed to checkout order",
-                details: error
-            }
-        });
-    }
-});
-
-router.get("/:orderId", isAuthenticated, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-        const { orderId } = req.params;
-
-        const order = await prisma.order.findUnique({
-            where: {
-                id: orderId,
-            },
-        });
-
-        if (!order) {
-            return res.status(404).json({
-                error: {
-                    message: "Order not found"
-                }
-            });
-        }
-
-        res.status(200).json({
-            data: order
-        });
-    } catch (error) {
-        res.status(500).json({
-            error: {
-                message: "Failed to remove item from order",
-                details: error
-            }
-        });
-    }
-});
-
 router.get("/active", isAuthenticated, async (req: AuthenticatedRequest, res: Response) => {
     try {
         let userId = req.user.sub;
@@ -478,7 +304,7 @@ router.get("/active", isAuthenticated, async (req: AuthenticatedRequest, res: Re
     }
 });
 
-router.get("/history", async (req: AuthenticatedRequest, res: Response) => {
+router.get("/history", isAuthenticated, async (req: AuthenticatedRequest, res: Response) => {
     try {
         let userId = req.user.sub;
 

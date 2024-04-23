@@ -38,6 +38,8 @@ class App {
     routes() {
         // Order routes
         this.server.use("/orders", routers.order);
+        this.server.use("/orders/actions", routers.orderActions);
+        this.server.use("/", routers.internal);
 
         // 404
         this.server.use((req: Request, res: Response, next: NextFunction) => {

@@ -3,7 +3,6 @@ import prisma from "../config/prisma";
 
 const router = Router();
 
-
 router.get("/:orderId", async (req: Request, res: Response) => {
     try {
         const { orderId } = req.params;
