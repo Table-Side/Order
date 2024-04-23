@@ -87,7 +87,7 @@ router.post("/:orderId/checkout", isAuthenticated, hasRole("customer"), isOrderF
 
         // Fetch latest order item details
         const itemIds = order.items.map((item: OrderItem) => item.itemId);
-        const itemDetailsReq = await fetch(`${process.env.RESTAURANT_SERVICE_URL}/internal/items`, {
+        const itemDetailsReq = await fetch(`${process.env.RESTAURANT_SERVICE_URL ?? 'restaurant'}/internal/items`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -158,7 +158,7 @@ router.post("/:orderId/checkout", isAuthenticated, hasRole("customer"), isOrderF
         });
 
         // Send order to kitchen service
-        const sendOrderToKitchenReq = await fetch(`${process.env.KITCHEN_SERVICE_URL}/internal/orders/receive`, {
+        const sendOrderToKitchenReq = await fetch(`${process.env.KITCHEN_SERVICE_URL ?? 'restaurant'}/internal/orders/receive`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

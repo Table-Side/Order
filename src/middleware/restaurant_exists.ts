@@ -4,7 +4,7 @@ import { AuthenticatedRequest } from '../interfaces';
 const restaurantExists = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const { restaurantId } = req.body;
 
-    const restaurant = await fetch(`${process.env.RESTAURANT_SERVICE_URL}/internal/restaurant/exists?id=${restaurantId}`, {
+    const restaurant = await fetch(`${process.env.RESTAURANT_SERVICE_URL ?? 'restaurant'}/internal/restaurant/exists?id=${restaurantId}`, {
         headers: {
             "X-Request-From": "tableside-order"
         }
