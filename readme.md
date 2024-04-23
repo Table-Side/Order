@@ -92,10 +92,14 @@ Manage an order.
     }
     ```
 
-    - **Sample Response**
+    - **Sample Response** (200: OK):
 
     ```json
-
+    {
+        "data": {
+            
+        }
+    }
     ```
 
 - **PATCH** `/:orderId/updateQuantity`: Update an item's quantity
@@ -119,7 +123,20 @@ Manage an order.
     }
     ```
 
+### User-Specific Order
+
 - **GET** `/active`: Get a user's current/active order
+
+    - **Sample Response** (200: OK):
+    ```json
+    {
+        "data": [
+            {
+                
+            }
+        ]
+    }
+    ```
 
 - **GET** `/history`: Get a user's order history
 
