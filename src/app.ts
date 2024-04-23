@@ -5,7 +5,7 @@ import * as middleware from "./middleware";
 import * as routers from "./routes";
 
 class App {
-    public server;
+    private server;
 
     constructor() {
         this.server = express();
@@ -36,9 +36,16 @@ class App {
     }
 
     routes() {
+        // User specific routes
+        this.server.use("/orders", routers.user)
+        
         // Order routes
         this.server.use("/orders", routers.order);
-        this.server.use("/orders/actions", routers.orderActions);
+
+        // Order items routes
+        this.server.use("/orders/:orderId/items", routers.orderItems);
+
+        // Internal routes
         this.server.use("/", routers.internal);
 
         // 404
@@ -52,6 +59,10 @@ class App {
             });
         });
     }
+
+    listen(port: number | string, callback: () => void) {
+        this.server.listen(port, callback);
+    }
 }
 
-export default new App().server;
+export default new App();
