@@ -19,7 +19,7 @@ router.post("/", isAuthenticated, hasRole("customer"), restaurantExists, async (
         const itemDetailsReq = await fetch(
             `http://${process.env.RESTAURANT_SERVICE_URL ?? 'restaurant:3000'}/internal/items`,
             {
-                method: "POST",
+                method: "GET",
                 headers: {
                     "Content-Type": "application/json",
                 },
