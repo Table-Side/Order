@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import prisma from "../config/prisma";
 
-const router = Router();
+const router = Router({ mergeParams: true });
 
 router.get("/:orderId", async (req: Request, res: Response) => {
     try {

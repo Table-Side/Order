@@ -4,21 +4,31 @@ import { AuthenticatedRequest } from "../interfaces";
 import { hasRole, isAuthenticated, restaurantExists, isOrderForUser } from "../middleware";
 import { OrderItem } from "@prisma/client";
 
-const router = Router();
+const router = Router({ mergeParams: true });
 
 router.post("/", isAuthenticated, hasRole("customer"), restaurantExists, async (req: AuthenticatedRequest, res: Response) => {
     // Create new order for current user
     try {
         const userId = req.user.sub;
-        const { restaurantId } = req.body;
+        const data = req.body;
 
-        console.log(`RestaurantID: ${restaurantId}`)
+        if (!data.restaurantId) {
+            return res.status(400).json({
+                error: {
+                    message: "Restaurant ID is required"
+                }
+            });
+        }
+
+        if (data.items && data.items.length > 0) {
+
+
 
         // Create new order
         const newOrder = await prisma.order.create({
             data: {
                 forUser: userId,
-                forRestaurant: restaurantId.toString(),
+                forRestaurant: data.restaurantId.toString(),
             },
         })
 
@@ -42,6 +52,116 @@ router.post("/", isAuthenticated, hasRole("customer"), restaurantExists, async (
         });
     }
 });
+
+
+router.post("", isAuthenticated, hasRole("customer"), isOrderForUser, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const { orderId } = req.params;
+        const { items } = req.body;
+
+        // Get the order
+        const order = await prisma.order.findFirst({
+            where: {
+                id: orderId,
+            }
+        });
+        if (!order) {
+            return res.status(404).json({
+                error: {
+                    message: "Order not found"
+                }
+            });
+        }
+
+        // Extract item IDs
+        const itemIds = items.map((item: { id: string, quantity: number }) => item.id);
+
+        // Ensure items exist
+        const itemDetailsReq = await fetch(
+            `http://${process.env.RESTAURANT_SERVICE_URL ?? 'restaurant:3000'}/internal/items`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ restaurantId: order.forRestaurant, itemIds: itemIds }),
+            }    
+        );
+
+        if (!itemDetailsReq.ok) {
+            return res.status(404).json({
+                error: {
+                    message: "Item not found",
+                    details: await itemDetailsReq.json()
+                }
+            });
+        }
+
+        // Ensure item ids balance with item details
+        const itemDetails = await itemDetailsReq.json();
+        if (itemDetails.data.length !== items.length) {
+            return res.status(400).json({
+                error: {
+                    message: "Item details mismatch",
+                    details: "Ensure all items are valid"
+                }
+            });
+        }
+
+        // Ensure items are not yet in order
+        const existingOrderItems = await prisma.orderItem.findMany({
+            where: {
+                orderId: orderId,
+                itemId: {
+                    in: itemIds,
+                },
+            },
+        });
+
+        if (existingOrderItems.length > 0) {
+            return res.status(400).json({
+                error: {
+                    message: "Doing it wrong: Items already in order",
+                    details: "Update the quantity instead of adding again."
+                }
+            });
+        }
+
+        // Create order items
+        const orderItems = await prisma.orderItem.createMany({
+            data: items.map((item: { id: string, quantity: number }) => ({
+                quantity: item.quantity,
+                price: itemDetails.data.find((i: any) => i.id === item.id).price,
+                order: {
+                    connect: {
+                        id: orderId,
+                    },
+                },
+                itemId: item.id,
+            })),
+        });
+
+        if (!orderItems) {
+            return res.status(500).json({ error: "Failed to add items to order" });
+        }
+
+        const updatedOrder = await prisma.order.findFirst({
+            where: {
+                id: orderId,
+            },
+            include: {
+                items: true,
+                transaction: true
+            }
+        });
+
+        res.status(200).json({
+            data: updatedOrder
+        });
+    } catch (error) {
+        res.status(500).json({ error: "Failed to add items to order" });
+    }
+})
 
 router.get("/:orderId", isAuthenticated, async (req: AuthenticatedRequest, res: Response) => {
     try {

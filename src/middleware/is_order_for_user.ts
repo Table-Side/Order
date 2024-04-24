@@ -3,7 +3,6 @@ import { AuthenticatedRequest } from '../interfaces';
 import prisma from "../config/prisma";
 
 const isOrderForUser = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-    console.log(`Request params: ${JSON.stringify(req.params)}`)
     const { orderId } = req.params;
     const userId = req.user.sub;
     const order = await prisma.order.findUnique({

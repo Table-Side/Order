@@ -3,7 +3,7 @@ import prisma from "../config/prisma";
 import { AuthenticatedRequest } from "../interfaces";
 import { isAuthenticated } from "../middleware";
 
-const router = Router();
+const router = Router({ mergeParams: true });
 
 router.get("/active", isAuthenticated, async (req: AuthenticatedRequest, res: Response) => {
     try {
