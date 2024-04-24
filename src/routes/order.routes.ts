@@ -187,52 +187,6 @@ router.post("/:orderId/checkout", isAuthenticated, hasRole("customer"), isOrderF
             });
         }
 
-        // // Get order details
-        // let order = await prisma.order.findUnique({
-        //     where: {
-        //         id: orderId,
-        //     },
-        //     include: {
-        //         items: true,
-        //     },
-        // });
-
-        // // Fetch latest order item details
-        // const itemIds = order.items.map((item: OrderItem) => item.itemId);
-        // const itemDetailsReq = await fetch(`http://${process.env.RESTAURANT_SERVICE_URL ?? 'restaurant:3000'}/internal/items`, {
-        //     method: "POST",
-        //     headers: {
-        //         "Content-Type": "application/json",
-        //         "X-Request-From": "tableside-order"
-        //     },
-        //     body: JSON.stringify({ itemIds }),
-        // });
-        // const itemDetails = await itemDetailsReq.json();
-        
-        // // Update order item prices
-        // const orderItemUpdates = itemDetails.map((item: { id: string, isAvailable: boolean, price: number }) => {
-        //     // Find corresponding item in order
-        //     const orderItem = order.items.find((orderItem: OrderItem) => orderItem.itemId === item.id);
-
-        //     if (item.isAvailable === false) {
-        //         return prisma.orderItem.delete({
-        //             where: {
-        //                 id: orderItem.id,
-        //             },
-        //         });
-        //     }
-
-        //     return prisma.orderItem.update({
-        //         where: {
-        //             id: item.id,
-        //         },
-        //         data: {
-        //             price: item.price,
-        //         },
-        //     });
-        // });
-        // await prisma.$transaction(orderItemUpdates); // Do as transaction in order to ensure order is updated atomically
-
         // Get latest order
         const order = await prisma.order.findUnique({
             where: {
@@ -252,12 +206,11 @@ router.post("/:orderId/checkout", isAuthenticated, hasRole("customer"), isOrderF
                         id: orderId,
                     },
                 },
-                currency: "GBP" // todo: obtain currency from restaurant service
             },
         });
 
         // Send order to kitchen service
-        const sendOrderToKitchenReq = await fetch(`http://${process.env.KITCHEN_SERVICE_URL ?? 'restaurant'}/internal/orders/receive`, {
+        const sendOrderToKitchenReq = await fetch(`http://${process.env.KITCHEN_SERVICE_URL ?? 'kitchen:3000'}/internal/orders/receive`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
