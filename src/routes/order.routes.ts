@@ -12,6 +12,8 @@ router.post("/", isAuthenticated, hasRole("customer"), restaurantExists, async (
         const userId = req.user.sub;
         const { restaurantId, items } = req.body;
 
+        console.log("Creating new order")
+
         // Extract item IDs
         const itemIds = items.map((item: { id: string, quantity: number }) => item.id);
 
@@ -36,6 +38,8 @@ router.post("/", isAuthenticated, hasRole("customer"), restaurantExists, async (
             });
         }
 
+        console.log("Item details fetched")
+
         // Ensure item ids balance with item details
         const itemDetails = await itemDetailsReq.json();
         if (itemDetails.data.length !== items.length) {
@@ -46,6 +50,8 @@ router.post("/", isAuthenticated, hasRole("customer"), restaurantExists, async (
                 }
             });
         }
+
+        console.log("Item details validated")
 
         // Create new order
         const newOrder = await prisma.order.create({
@@ -63,6 +69,8 @@ router.post("/", isAuthenticated, hasRole("customer"), restaurantExists, async (
             });
         }
 
+        console.log("Order created")
+
         // Create order items
         const orderItems = await prisma.orderItem.createMany({
             data: items.map((item: { id: string, quantity: number }) => ({
@@ -76,6 +84,16 @@ router.post("/", isAuthenticated, hasRole("customer"), restaurantExists, async (
                 itemId: item.id,
             })),
         });
+
+        if (!orderItems) {
+            return res.status(500).json({
+                error: {
+                    message: "Order items cannot be created"
+                }
+            });
+        }
+
+        console.log("Order items created")
 
         res.status(200).json({
             data: newOrder
