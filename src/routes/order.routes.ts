@@ -15,6 +15,8 @@ router.post("/", isAuthenticated, hasRole("customer"), restaurantExists, async (
         // Extract item IDs
         const itemIds = items.map((item: any) => item.id);
 
+        console.log("Creating new order")
+
         // Ensure items exist
         const itemDetailsReq = await fetch(
             `http://${process.env.RESTAURANT_SERVICE_URL ?? 'restaurant:3000'}/internal/items`,
@@ -35,6 +37,8 @@ router.post("/", isAuthenticated, hasRole("customer"), restaurantExists, async (
                 }
             });
         }
+
+        console.log("Items validated")
 
         // Ensure item ids balance with item details
         const itemDetails = await itemDetailsReq.json();
