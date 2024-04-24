@@ -37,7 +37,7 @@ model Transaction {
   createdAt   DateTime @default(now())
 
   currency    String   @default("GBP")
-  amount      Float
+  amount      Decimal  @db.Money
 
   orderId     String? @unique
   order       Order?  @relation(fields: [orderId], references: [id])
