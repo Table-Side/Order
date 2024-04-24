@@ -7,52 +7,52 @@ import { OrderItem } from "@prisma/client";
 const router = Router({ mergeParams: true });
 
 router.post("/", isAuthenticated, hasRole("customer"), restaurantExists, async (req: AuthenticatedRequest, res: Response) => {
-    // Create new order for current user
-    const userId = req.user.sub;
-    const { restaurantId, items } = req.body;
-
-    console.log("Creating new order")
-
-    // Extract item IDs
-    const itemIds = items.map((item: any) => item.id);
-
-    // Ensure items exist
-    const itemDetailsReq = await fetch(
-        `http://${process.env.RESTAURANT_SERVICE_URL ?? 'restaurant:3000'}/internal/items`,
-        {
-            method: "GET",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ restaurantId: restaurantId, itemIds: itemIds }),
-        }    
-    );
-
-    if (!itemDetailsReq.ok) {
-        return res.status(404).json({
-            error: {
-                message: "Item not found",
-                details: await itemDetailsReq.json()
-            }
-        });
-    }
-
-    console.log("Item details fetched")
-
-    // Ensure item ids balance with item details
-    const itemDetails = await itemDetailsReq.json();
-    if (itemDetails.data.length !== items.length) {
-        return res.status(400).json({
-            error: {
-                message: "Item details mismatch",
-                details: "Ensure all items are valid"
-            }
-        });
-    }
-
-    console.log("Item details validated")
-
     try {
+        // Create new order for current user
+        const userId = req.user.sub;
+        const { restaurantId, items } = req.body;
+
+        console.log("Creating new order")
+
+        // Extract item IDs
+        const itemIds = items.map((item: any) => item.id);
+
+        // Ensure items exist
+        const itemDetailsReq = await fetch(
+            `http://${process.env.RESTAURANT_SERVICE_URL ?? 'restaurant:3000'}/internal/items`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ restaurantId: restaurantId, itemIds: itemIds }),
+            }
+        );
+
+        if (!itemDetailsReq.ok) {
+            return res.status(404).json({
+                error: {
+                    message: "Item not found",
+                    details: await itemDetailsReq.json()
+                }
+            });
+        }
+
+        console.log("Item details fetched")
+
+        // Ensure item ids balance with item details
+        const itemDetails = await itemDetailsReq.json();
+        if (itemDetails.data.length !== items.length) {
+            return res.status(400).json({
+                error: {
+                    message: "Item details mismatch",
+                    details: "Ensure all items are valid"
+                }
+            });
+        }
+
+        console.log("Item details validated")
+
         // Create new order
         const newOrder = await prisma.order.create({
             data: {
