@@ -200,6 +200,7 @@ router.post("/:orderId/checkout", isAuthenticated, hasRole("customer"), isOrderF
                 items: true,
             },
         });
+        const restaurantId = order.forRestaurant;
 
         // Create transaction
         const transaction = await prisma.transaction.create({
@@ -216,14 +217,13 @@ router.post("/:orderId/checkout", isAuthenticated, hasRole("customer"), isOrderF
         console.log("Transaction created")
 
         // Send order to kitchen service
-        const sendOrderToKitchenReq = await fetch(`http://${process.env.KITCHEN_SERVICE_URL ?? 'kitchen:3000'}/internal/orders/receive`, {
+        const sendOrderToKitchenReq = await fetch(`http://${process.env.KITCHEN_SERVICE_URL ?? 'kitchen:3000'}/internal/orders/${restaurantId}/receive`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "X-Request-From": "tableside-order"
             },
             body: JSON.stringify({
-                restaurantId: order.forRestaurant,
                 orderId: orderId,
                 userId: userId,
                 items: order.items.map((item: OrderItem) => ({
