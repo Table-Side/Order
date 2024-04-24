@@ -5,7 +5,7 @@ import { hasRole, isAuthenticated, isOrderForUser } from "../middleware";
 
 const router = Router();
 
-router.put("", isAuthenticated, hasRole("customer"), isOrderForUser, async (req: AuthenticatedRequest, res: Response) => {
+router.post("", isAuthenticated, hasRole("customer"), isOrderForUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
         const { orderId } = req.params;
         const { items } = req.body;
