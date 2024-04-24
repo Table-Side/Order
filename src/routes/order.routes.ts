@@ -234,13 +234,12 @@ router.post("/:orderId/checkout", isAuthenticated, hasRole("customer"), isOrderF
         });
 
         // Circuit break: order could not be sent to kitchen
-        const sendOrderToKitchenResBody = await sendOrderToKitchenReq.json();
         if (!sendOrderToKitchenReq.ok) {
             // Remove order transaction from database
             await prisma.transaction.delete({
                 where: {
                     id: transaction.id,
-                },
+                }
             });
 
             console.log('Failed to send order to kitchen')
@@ -248,7 +247,7 @@ router.post("/:orderId/checkout", isAuthenticated, hasRole("customer"), isOrderF
             return res.status(500).json({
                 error: {
                     message: "Failed to send order to kitchen.",
-                    details: await sendOrderToKitchenResBody.json()
+                    details: await sendOrderToKitchenReq.json()
                 }
             });
         }
