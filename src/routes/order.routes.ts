@@ -63,25 +63,27 @@ router.post("/", isAuthenticated, hasRole("customer"), restaurantExists, async (
             });
         }
 
+        console.log("Order created")
+
         // Create order items
-        await prisma.$transaction(
-            items.map(async (item: { id: string, quantity: number }) => {
-                const itemDetail = itemDetails.data.find((i: any) => i.id === item.id);
-                const orderItem = await prisma.orderItem.create({
-                    data: {
-                        itemId: item.id,
-                        quantity: item.quantity,
-                        price: itemDetail.price,
-                        order: {
-                            connect: {
-                                id: newOrder.id,
-                            },
+        const orderItems = items.map((item: any) => {
+            const itemDetail = itemDetails.data.find((detail: any) => detail.id === item.id);
+
+            return prisma.orderItem.create({
+                data: {
+                    order: {
+                        connect: {
+                            id: newOrder.id,
                         },
                     },
-                });
-                return orderItem;
-            })
-        );
+                    itemId: item.id,
+                    price: itemDetail.price,
+                    quantity: item.quantity,
+                },
+            });
+        });
+
+        await prisma.$transaction(orderItems);
 
         console.log("Order items created")
 
@@ -141,6 +143,29 @@ router.get("/:orderId", isAuthenticated, async (req: AuthenticatedRequest, res: 
         });
     }
 });
+
+router.delete("/:orderId", isAuthenticated, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const { orderId } = req.params;
+
+        const order = await prisma.order.delete({
+            where: {
+                id: orderId,
+            },
+        });
+
+        res.status(200).json({
+            data: order
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: {
+                message: "Failed to remove item from order",
+                details: error
+            }
+        });
+    }
+)
 
 router.post("/:orderId/checkout", isAuthenticated, hasRole("customer"), isOrderForUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
