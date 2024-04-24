@@ -171,6 +171,8 @@ router.post("/:orderId/checkout", isAuthenticated, hasRole("customer"), isOrderF
     try {
         const { orderId } = req.params;
         const userId = req.user.sub;
+        
+        console.log("Checking out order")
 
         // Ensure order is not checked out already
         const existingTransaction = await prisma.transaction.findFirst({
@@ -186,6 +188,8 @@ router.post("/:orderId/checkout", isAuthenticated, hasRole("customer"), isOrderF
                 }
             });
         }
+
+        console.log("Order validated as not checked out")
 
         // Get latest order
         const order = await prisma.order.findUnique({
@@ -208,6 +212,8 @@ router.post("/:orderId/checkout", isAuthenticated, hasRole("customer"), isOrderF
                 },
             },
         });
+
+        console.log("Transaction created")
 
         // Send order to kitchen service
         const sendOrderToKitchenReq = await fetch(`http://${process.env.KITCHEN_SERVICE_URL ?? 'kitchen:3000'}/internal/orders/receive`, {
@@ -237,6 +243,8 @@ router.post("/:orderId/checkout", isAuthenticated, hasRole("customer"), isOrderF
                 },
             });
 
+            console.log('Failed to send order to kitchen')
+
             return res.status(500).json({
                 error: {
                     message: "Failed to send order to kitchen.",
@@ -244,6 +252,8 @@ router.post("/:orderId/checkout", isAuthenticated, hasRole("customer"), isOrderF
                 }
             });
         }
+
+        console.log("Order sent to kitchen")
 
         const completedOrder = await prisma.order.findUnique({
             where: {
@@ -254,6 +264,8 @@ router.post("/:orderId/checkout", isAuthenticated, hasRole("customer"), isOrderF
                 transaction: true
             },
         });
+
+        console.log("Order check out completed")
 
         res.status(200).json({
             data: completedOrder
