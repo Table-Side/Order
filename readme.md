@@ -125,7 +125,7 @@ Manage an order.
 
 ### User-Specific Order
 
-- **GET** `/active`: Get a user's current/active order
+- **GET** `/active`: Get a user's current/active orders
 
     - **Sample Response** (200: OK):
     ```json
