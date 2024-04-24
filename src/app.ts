@@ -42,9 +42,6 @@ class App {
         // Order routes
         this.server.use("/orders", routers.order);
 
-        // Order items routes
-        this.server.use("/orders/:orderId/items", routers.orderItems);
-
         // Internal routes
         this.server.use("/", routers.internal);
 
