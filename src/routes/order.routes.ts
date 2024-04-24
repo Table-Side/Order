@@ -165,7 +165,7 @@ router.delete("/:orderId", isAuthenticated, async (req: AuthenticatedRequest, re
             }
         });
     }
-)
+});
 
 router.post("/:orderId/checkout", isAuthenticated, hasRole("customer"), isOrderForUser, async (req: AuthenticatedRequest, res: Response) => {
     try {
