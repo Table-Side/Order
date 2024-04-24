@@ -12,8 +12,6 @@ router.post("/", isAuthenticated, hasRole("customer"), restaurantExists, async (
         const userId = req.user.sub;
         const { restaurantId, items } = req.body;
 
-        console.log("Creating new order")
-
         // Extract item IDs
         const itemIds = items.map((item: any) => item.id);
 
@@ -38,8 +36,6 @@ router.post("/", isAuthenticated, hasRole("customer"), restaurantExists, async (
             });
         }
 
-        console.log("Item details fetched")
-
         // Ensure item ids balance with item details
         const itemDetails = await itemDetailsReq.json();
         if (itemDetails.data.length !== items.length) {
@@ -50,8 +46,6 @@ router.post("/", isAuthenticated, hasRole("customer"), restaurantExists, async (
                 }
             });
         }
-
-        console.log("Item details validated")
 
         // Create new order
         const newOrder = await prisma.order.create({
@@ -64,39 +58,44 @@ router.post("/", isAuthenticated, hasRole("customer"), restaurantExists, async (
         if (!newOrder) {
             return res.status(500).json({
                 error: {
-                    message: "Order cannot be created"
+                    message: "Order failed to be created"
                 }
             });
         }
-
-        console.log("Order created")
 
         // Create order items
-        const orderItems = await prisma.orderItem.createMany({
-            data: items.map((item: { id: string, quantity: number }) => ({
-                quantity: item.quantity,
-                price: itemDetails.data.find((i: any) => i.id === item.id).price,
-                order: {
-                    connect: {
-                        id: newOrder.id,
+        await prisma.$transaction(
+            items.map(async (item: { id: string, quantity: number }) => {
+                const itemDetail = itemDetails.data.find((i: any) => i.id === item.id);
+                const orderItem = await prisma.orderItem.create({
+                    data: {
+                        itemId: item.id,
+                        quantity: item.quantity,
+                        price: itemDetail.price,
+                        order: {
+                            connect: {
+                                id: newOrder.id,
+                            },
+                        },
                     },
-                },
-                itemId: item.id,
-            })),
-        });
-
-        if (!orderItems) {
-            return res.status(500).json({
-                error: {
-                    message: "Order items cannot be created"
-                }
-            });
-        }
+                });
+                return orderItem;
+            })
+        );
 
         console.log("Order items created")
 
+        const order = await prisma.order.findUnique({
+            where: {
+                id: newOrder.id,
+            },
+            include: {
+                items: true,
+            },
+        });
+
         res.status(200).json({
-            data: newOrder
+            data: order
         });
     } catch (error) {
         res.status(500).json({
